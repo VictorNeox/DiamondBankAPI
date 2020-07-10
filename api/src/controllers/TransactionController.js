@@ -10,9 +10,9 @@ module.exports = {
             return res.send({ error: 'We dont accept zero or negative numbers'});
         }
 
-        const balance = await connection('users').select('*').where('bankaccount', bankaccount).first();
+        const { value } = await connection('users').select('value').where('bankaccount', bankaccount).first();
 
-        if(balance.value < data.value) {
+        if(value < data.value) {
             return res.status(404).send({ error: 'You dont have enough balance' });
         }
 

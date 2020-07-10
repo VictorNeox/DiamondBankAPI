@@ -4,6 +4,7 @@ const routes = express.Router();
 
 const AuthController = require('./controllers/AuthController');
 const TransactionController = require('./controllers/TransactionController');
+const UserController = require('./controllers/UserController');
 const authMiddleware = require('./middlewares/auth');
 
 routes.get('/', (req, res) => {
@@ -13,6 +14,9 @@ routes.get('/', (req, res) => {
 routes.post('/user/register', AuthController.Register);
 routes.post('/user/authenticate', AuthController.Authenticate);
 routes.post('/user/transfer', authMiddleware, TransactionController.Transfer);
+
+routes.get('/user/balance', authMiddleware, UserController.Balance);
+routes.get('/user/transactions', authMiddleware, UserController.Transactions);
 
 routes.get('/list', async (req, res) => {
     const users = await connection('users').select('*');
