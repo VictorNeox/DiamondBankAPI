@@ -1,41 +1,36 @@
-const jwt = require('jsonwebtoken');
 
-const authConfig = require('../config/authConfig.json');
 const connection = require('../database/connection');
 
 module.exports = {
     async Transfer(req, res) {
         const data = req.body;
-        const token = req.headers.authorization;
+        const bankaccount = req.bankaccount;
 
-        jwt.verify(token, authConfig.secret, async (err, decoded) => {
-            if(err) return res.send(401).send( { error: 'Invalid Token' });
+        if(data.value <= 0) {
+            return res.send({ error: 'We dont accept zero or negative numbers'});
+        }
 
-            data.bankaccount = decoded.bankaccount;
+        const balance = await connection('users').select('*').where('bankaccount', bankaccount).first();
+
+        if(balance.value < data.value) {
+            return res.status(404).send({ error: 'You dont have enough balance' });
+        }
 
 
-            const balance = await connection('users').select('value').where('bankaccount', data.bankaccount).first();
+        const user = await connection('users').increment({ value: data.value }).where('bankaccount', data.receiver);
+        if(!user) {
+            return res.status(404).send({ error: 'This account dont exists'});
+        }
 
-            
-            if(balance.value < data.value) {
-                return res.status(404).send({ message: 'You dont have enough balance' })
-            }
+        await connection('users').decrement({ value: data.value }).where('bankaccount', bankaccount);
 
-            const user = await connection('users').increment({ value: data.value }).where('bankaccount', data.receiver);
-            if(!user) {
-                return res.status(404).send({ error: 'This account dont exists'});
-            }
+        await connection('transactions').insert({
+            value: data.value,
+            receiver: data.receiver,
+            accountid: bankaccount
+        });
+        
 
-            await connection('users').decrement({ value: data.value }).where('bankaccount', data.bankaccount);
-
-            await connection('transactions').insert({
-                value: data.value,
-                receiver: data.receiver,
-                accountid: data.bankaccount
-            });
-            
-
-            return res.status(200).send({ message: 'Transaction successful' });
-        })
+        return res.status(200).send({ message: 'Transaction successful' });
     }
 }
